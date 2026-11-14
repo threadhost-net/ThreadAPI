@@ -6,9 +6,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/threadhost-net/ThreadAPI/internal/applications"
+	"github.com/threadhost-net/ThreadAPI/platform"
 )
 
-func InitRouter(toolbox *applications.ToolBox, domain string) http.Handler {
+var toolbox *applications.Toolbox
+
+func InitRouter(stack *platform.Stack, domain string) http.Handler {
+	toolbox = &applications.Toolbox{Stack: stack}
 
 	// Настройки роутера
 	r := chi.NewRouter()
@@ -22,25 +26,25 @@ func InitRouter(toolbox *applications.ToolBox, domain string) http.Handler {
 
 	// Публичные пути
 	r.Group(func(r chi.Router) {
-		r.Get("/", toolbox.HealthCheck)
-		r.Post("/auth/register", toolbox.Register)                      // auth
-		r.Post("/auth/login", toolbox.Login)                            // auth
-		r.Post("/auth/logout", toolbox.Logout)                          // auth
-		r.Post("/auth/confirm_mail", toolbox.ConfirmEmail)              // auth
-		r.Post("/auth/resend_verification", toolbox.ResendVerification) // auth
+		r.Get("/", HealthCheck)
+		r.Post("/auth/register", Register)                      // auth
+		r.Post("/auth/login", Login)                            // auth
+		r.Post("/auth/logout", Logout)                          // auth
+		r.Post("/auth/confirm_mail", ConfirmEmail)              // auth
+		r.Post("/auth/resend_verification", ResendVerification) // auth
 
-		r.Post("/user/forgot_password", toolbox.ForgotPassword)                // user
-		r.Post("/user/forgot_password/confirm", toolbox.ConfirmForgotPassword) // user
-		r.Post("/user/change_new_email/confirm", toolbox.ConfirmNewEmail)      // user
+		r.Post("/user/forgot_password", ForgotPassword)                // user
+		r.Post("/user/forgot_password/confirm", ConfirmForgotPassword) // user
+		r.Post("/user/change_new_email/confirm", ConfirmNewEmail)      // user
 	})
 
 	// Приватные пути
 	r.Group(func(r chi.Router) {
-		r.Use(toolbox.AuthMiddleware)                                  // точно ли в toolbox?
-		r.Get("/user/info", toolbox.UserInfo)                          // user
-		r.Post("/user/change_new_password", toolbox.ChangeNewPassword) // user
-		r.Post("/user/change_new_email", toolbox.ChangeNewEmail)       // user
-		r.Delete("/user/delete", toolbox.UserDelete)                   // user
+		r.Use(AuthMiddleware)                                  // точно ли в toolbox?
+		r.Get("/user/info", UserInfo)                          // user
+		r.Post("/user/change_new_password", ChangeNewPassword) // user
+		r.Post("/user/change_new_email", ChangeNewEmail)       // user
+		r.Delete("/user/delete", UserDelete)                   // user
 	})
 
 	return r

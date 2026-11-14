@@ -22,7 +22,8 @@ type Config struct {
 
 	IsLeader bool
 
-	HCaptchaSecret string
+	HCaptchaSecret  string
+	HCaptchaSitekey string
 
 	PaymentsAPIAddress string
 }
@@ -44,7 +45,8 @@ func New() *Config {
 
 		IsLeader: envOrDefault("IS_LEADER", "true") == "true",
 
-		HCaptchaSecret: envOrDefault("HCAPTCHA_SECRET", ""),
+		HCaptchaSecret:  envOrDefault("HCAPTCHA_SECRET", ""),
+		HCaptchaSitekey: envOrDefault("HCAPTCHA_SITEKEY", ""),
 
 		PaymentsAPIAddress: envOrDefault("PAYMETSAPI_ADDRESS", "localhost"),
 	}

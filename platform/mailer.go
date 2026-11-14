@@ -11,16 +11,6 @@ type Mailer struct {
 	port                           int
 }
 
-func NewMailer(host string, port int, username, password, from string) *Mailer {
-	return &Mailer{
-		host:     host,
-		port:     port,
-		username: username,
-		password: password,
-		from:     from,
-	}
-}
-
 func (m *Mailer) Send(to, subject, body string) error {
 	client := email.NewSMTPClient()
 	client.Host = m.host

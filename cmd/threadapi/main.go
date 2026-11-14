@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/threadhost-net/ThreadAPI/internal/applications"
 	"github.com/threadhost-net/ThreadAPI/internal/config"
 	"github.com/threadhost-net/ThreadAPI/internal/httpapi"
 	"github.com/threadhost-net/ThreadAPI/internal/migrations"
@@ -24,23 +23,19 @@ func main() {
 
 	cfg := config.New()
 
-	stack := platform.Stack{
-		Redis:          platform.InitRedis(cfg.RedisHost, cfg.RedisPassword),
-		Mailer:         platform.NewMailer(cfg.SmtpHost, cfg.SmtpPort, cfg.SmtpUsername, cfg.SmtpPassword, cfg.SmtpFrom),
-		DB:             platform.InitDBPool(cfg.DatabaseURL),
-		Domain:         cfg.Domain,
-		HCaptchaSecret: cfg.HCaptchaSecret,
-	}
+	stack := platform.NewStack(cfg)
 	defer stack.Redis.Close()
 	defer stack.DB.Close()
 
 	migrationCtx, migrationCancel := context.WithTimeout(ctx, 10*time.Second)
-	defer migrationCancel()
 	if err := migrations.Start(migrationCtx, stack.DB); err != nil {
-		log.Fatalln("Не удалось создать структуру БД: ", err)
+		migrationCancel()
+		log.Println("Не удалось создать структуру БД: ", err)
+		return
 	}
+	migrationCancel()
 
-	handler := httpapi.InitRouter(applications.NewToolBox(&stack), cfg.Domain)
+	handler := httpapi.InitRouter(stack, cfg.Domain)
 	srv := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -48,6 +43,15 @@ func main() {
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
+
+	defer func() {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Println("Сервер выключен принудительно: ", err)
+		}
+		log.Println("Сервер выключен")
+	}()
 
 	ln, err := net.Listen("tcp", cfg.ServerAddress)
 	if err != nil {
@@ -68,11 +72,4 @@ func main() {
 		log.Println("Сервер упал: ", err)
 		return
 	}
-
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer shutdownCancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Println("Сервер выключен принудительно: ", err)
-	}
-	log.Println("Сервер выключен")
 }
