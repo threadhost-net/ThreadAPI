@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест регистрации</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 420px; margin: 40px auto; padding: 0 16px; }
+        label { display: block; margin-top: 12px; font-size: 14px; color: #333; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 4px; }
+        button { margin-top: 16px; padding: 10px 20px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 12px; border-radius: 6px; font-family: monospace; white-space: pre-wrap; }
+        .ok  { background: #e6ffed; border: 1px solid #34c759; }
+        .err { background: #ffecec; border: 1px solid #ff3b30; }
+    </style>
+</head>
+<body>
+    <h2>Регистрация</h2>
+
+    <form id="regForm">
+        <label>Username
+            <input name="username" required autocomplete="off">
+        </label>
+        <label>Password
+            <input name="password" type="password" required autocomplete="off">
+        </label>
+        <label>Email
+            <input name="email" type="email" required autocomplete="off">
+        </label>
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+
+    <div id="result" hidden></div>
+
+    <script>
+        const form   = document.getElementById('regForm');
+        const result = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = Object.fromEntries(new FormData(form));
+
+            try {
+                const res = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                const text = await res.text();
+                result.hidden = false;
+                result.className = res.ok ? 'ok' : 'err';
+                result.textContent =
+                    `Статус: ${res.status} ${res.statusText}\n` +
+                    (text ? `Ответ: ${text}` : '');
+            } catch (err) {
+                result.hidden = false;
+                result.className = 'err';
+                result.textContent = 'Ошибка сети: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.git
+.gitignore
+*.md
+Dockerfile
+docker-compose.yaml
+.env
+.env.*
+/threadapi
+/dist
+/tmp

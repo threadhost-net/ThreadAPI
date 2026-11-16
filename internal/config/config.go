@@ -37,11 +37,11 @@ func New() *Config {
 		ServerAddress: envOrDefault("ADDRESS", "0.0.0.0:3000"),
 		Domain:        envOrDefault("DOMAIN", "localhost"),
 
-		SmtpHost:     envOrDefault("SMTP_HOST", "smtp.example.com"),
-		SmtpPort:     envOrDefaultInt("SMTP_PORT", 587),
-		SmtpUsername: envOrDefault("SMTP_USERNAME", "user"),
+		SmtpHost:     envOrDefault("SMTP_HOST", "smtp.example.net"),
+		SmtpPort:     envOrDefaultInt("SMTP_PORT", 465),
+		SmtpUsername: envOrDefault("SMTP_USERNAME", "mail@example.net"),
 		SmtpPassword: envOrDefault("SMTP_PASSWORD", "password"),
-		SmtpFrom:     envOrDefault("SMTP_FROM", "user@example.com"),
+		SmtpFrom:     envOrDefault("SMTP_FROM", "noreply@example.net"),
 
 		IsLeader: envOrDefault("IS_LEADER", "true") == "true",
 

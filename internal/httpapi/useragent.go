@@ -1,11 +1,11 @@
-package applications
+package httpapi
 
 import (
 	"fmt"
 	"strings"
 )
 
-func ParseUserAgent(userAgent string) string {
+func parseUserAgent(userAgent string) string {
 	if !strings.Contains(userAgent, ")") {
 		return userAgent
 	}

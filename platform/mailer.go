@@ -31,7 +31,7 @@ func (m *Mailer) Send(to, subject, body string) error {
 	defer smtpClient.Close()
 
 	msg := email.NewMSG()
-	msg.SetFrom(m.from)
+	msg.SetFrom("ThreadHost <" + m.from + ">")
 	msg.AddTo(to)
 	msg.SetSubject(subject)
 	msg.SetBody(email.TextHTML, body)
