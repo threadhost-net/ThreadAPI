@@ -7,18 +7,18 @@ import (
 )
 
 type Mailer struct {
-	host, username, password, from string
-	port                           int
+	Host, Username, Password, From string
+	Port                           int
 }
 
 func (m *Mailer) Send(to, subject, body string) error {
 	client := email.NewSMTPClient()
-	client.Host = m.host
-	client.Port = m.port
-	client.Username = m.username
-	client.Password = m.password
+	client.Host = m.Host
+	client.Port = m.Port
+	client.Username = m.Username
+	client.Password = m.Password
 
-	if m.port == 465 {
+	if m.Port == 465 {
 		client.Encryption = email.EncryptionSSL
 	} else {
 		client.Encryption = email.EncryptionSTARTTLS
@@ -31,7 +31,7 @@ func (m *Mailer) Send(to, subject, body string) error {
 	defer smtpClient.Close()
 
 	msg := email.NewMSG()
-	msg.SetFrom("ThreadHost <" + m.from + ">")
+	msg.SetFrom("ThreadHost <" + m.From + ">")
 	msg.AddTo(to)
 	msg.SetSubject(subject)
 	msg.SetBody(email.TextHTML, body)

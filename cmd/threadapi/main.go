@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/threadhost-net/ThreadAPI/internal/config"
 	"github.com/threadhost-net/ThreadAPI/internal/httpapi"
 	"github.com/threadhost-net/ThreadAPI/internal/migrations"
@@ -23,7 +24,7 @@ func main() {
 
 	cfg := config.New()
 
-	stack := platform.NewStack(cfg)
+	stack := newStack(cfg)
 	defer stack.Redis.Close()
 	defer stack.DB.Close()
 
@@ -72,4 +73,47 @@ func main() {
 		log.Println("Сервер упал: ", err)
 		return
 	}
+}
+
+func newStack(cfg *config.Config) *platform.Stack {
+	return &platform.Stack{
+		Redis:  initRedis(cfg.RedisHost, cfg.RedisPassword),
+		Mailer: newMailer(cfg.SmtpHost, cfg.SmtpPort, cfg.SmtpUsername, cfg.SmtpPassword, cfg.SmtpFrom),
+		DB:     initDBPool(cfg.DatabaseURL),
+		Domain: cfg.Domain,
+	}
+}
+
+func newMailer(host string, port int, username, password, from string) *platform.Mailer {
+	return &platform.Mailer{
+		Host:     host,
+		Port:     port,
+		Username: username,
+		Password: password,
+		From:     from,
+	}
+}
+
+func initRedis(redisHost, redisPassword string) *platform.MultiRedis {
+	managerRedis := platform.NewMultiRedis().WithDefault(redisHost, redisPassword)
+	managerRedis.Add("sessions", 0)
+	managerRedis.Add("email_verify", 1)
+	managerRedis.Add("password_reset", 2)
+
+	if errs := managerRedis.Errors(); len(errs) > 0 {
+		for _, err := range errs {
+			log.Println(err)
+		}
+		log.Fatalln("redis init failed")
+	}
+
+	return managerRedis
+}
+
+func initDBPool(databaseURL string) *pgxpool.Pool {
+	managerDBPool, err := platform.NewDBPool(databaseURL)
+	if err != nil {
+		log.Fatalln("postgres init failed:", err)
+	}
+	return managerDBPool
 }

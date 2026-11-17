@@ -2,8 +2,6 @@ package applications
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"log"
@@ -13,27 +11,27 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/redis/go-redis/v9"
 	"github.com/threadhost-net/ThreadAPI/assets/emails"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/threadhost-net/ThreadAPI/security"
+	"github.com/threadhost-net/ThreadAPI/session"
 )
 
-func (tb *Toolbox) Register(ctx context.Context, username, password, email, hCaptchaResponse string) (code int, err error) {
+func (tb *Toolbox) Register(ctx context.Context, username, password, email, hCaptchaResponse string) (status int, err error) {
 	// TODO капча
 
-	if err := validateUsername(username); err != nil {
+	if err := security.ValidateUsername(username); err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	if err := validatePassword(password); err != nil {
+	if err := security.ValidatePassword(password); err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	if err := validateEmail(email); err != nil {
+	if err := security.ValidateEmail(email); err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	hashPassword, err := hash(password)
+	hashPassword, err := security.Hash(password)
 	if err != nil {
 		return http.StatusInternalServerError, errors.New("Не удалось захэшировать пароль")
 	}
@@ -48,7 +46,7 @@ func (tb *Toolbox) Register(ctx context.Context, username, password, email, hCap
 		return http.StatusInternalServerError, errors.New("Не удалось создать учётную запись")
 	}
 
-	emailToken, err := issueToken(ctx, tb.Redis.Get("email_verify"), "token:", strconv.FormatInt(userID, 10), 24*time.Hour)
+	emailToken, err := session.IssueToken(ctx, tb.Redis.Get("email_verify"), "token:", strconv.FormatInt(userID, 10), 24*time.Hour)
 	if err != nil {
 		log.Println(err)
 
@@ -66,7 +64,7 @@ func (tb *Toolbox) Register(ctx context.Context, username, password, email, hCap
 	return http.StatusCreated, nil
 }
 
-func (tb *Toolbox) Login(ctx context.Context, username, password, hCaptchaResponse, address, userAgent string) (code int, cookieToken string, err error) {
+func (tb *Toolbox) Login(ctx context.Context, username, password, hCaptchaResponse, address, userAgent string) (status int, cookieToken string, err error) {
 	// TODO капча
 	var (
 		userID       int64
@@ -83,7 +81,7 @@ func (tb *Toolbox) Login(ctx context.Context, username, password, hCaptchaRespon
 		return http.StatusInternalServerError, "", errors.New("Не удалось проверить вашу учётную запись")
 	}
 
-	if !verifyPassword(passwordHash, password) {
+	if !security.VerifyPassword(passwordHash, password) {
 		return http.StatusUnauthorized, "", errors.New("Неверный пароль")
 	}
 
@@ -91,10 +89,10 @@ func (tb *Toolbox) Login(ctx context.Context, username, password, hCaptchaRespon
 		return http.StatusForbidden, "", errors.New("Учётная запись не подтверждена")
 	}
 
-	currentSession := session{
-		userAgent: userAgent,
-		ip:        address,
-		createdAt: time.Now().UTC(),
+	currentSession := session.UserSession{
+		UserAgent: userAgent,
+		IP:        address,
+		CreatedAt: time.Now().UTC(),
 	}
 
 	jsonSession, err := json.Marshal(currentSession)
@@ -104,48 +102,20 @@ func (tb *Toolbox) Login(ctx context.Context, username, password, hCaptchaRespon
 	}
 
 	userIDStr := strconv.FormatInt(userID, 10)
-	token, err := issueToken(ctx, tb.Redis.Get("sessions"), userIDStr, string(jsonSession), 7*24*time.Hour)
+	token, err := session.IssueToken(ctx, tb.Redis.Get("sessions"), userIDStr, string(jsonSession), 7*24*time.Hour)
 	if err != nil {
 		return http.StatusInternalServerError, "", errors.New("Не удалось создать сессию")
 	}
 
-	return http.StatusAccepted, token, nil
+	cookieToken = userIDStr + ":" + token
+	return http.StatusAccepted, cookieToken, nil
 }
 
-// Утилиты
-
-func hash(password string) (string, error) {
-	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(b), err
-}
-
-func verifyPassword(hash, password string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
-}
-
-func issueToken(ctx context.Context, client *redis.Client, userID, value string, ttl time.Duration) (string, error) {
-	for {
-		token, err := newToken()
-		if err != nil {
-			return "", err
-		}
-
-		ok, err := client.SetNX(ctx, userID+":"+token, value, ttl).Result()
-		if err != nil {
-			log.Println(err)
-			return "", err
-		}
-		if ok {
-			return token, nil
-		}
+func (tb *Toolbox) Logout(ctx context.Context, cookieToken string) (status int, err error) {
+	client := tb.Redis.Get("sessions")
+	if err := client.Del(ctx, "session:"+cookieToken).Err(); err != nil {
+		log.Println(err)
+		return http.StatusInternalServerError, errors.New("Не удалось удалить вашу сессию с сервера")
 	}
-}
-
-func newToken() (string, error) {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
+	return http.StatusOK, nil
 }

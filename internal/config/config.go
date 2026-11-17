@@ -1,9 +1,6 @@
 package config
 
-import (
-	"os"
-	"strconv"
-)
+import "github.com/threadhost-net/ThreadAPI/env"
 
 type Config struct {
 	DatabaseURL string
@@ -30,40 +27,25 @@ type Config struct {
 
 func New() *Config {
 	return &Config{
-		DatabaseURL:   envOrDefault("DATABASE_URL", "postgres://user:password@localhost:5432/database?sslmode=disable"),
-		RedisHost:     envOrDefault("REDIS_HOST", "localhost:6379"),
-		RedisPassword: envOrDefault("REDIS_PASSWORD", "password"),
+		DatabaseURL: env.OrDefault("DATABASE_URL", "postgres://user:password@localhost:5432/database?sslmode=disable"),
 
-		ServerAddress: envOrDefault("ADDRESS", "0.0.0.0:3000"),
-		Domain:        envOrDefault("DOMAIN", "localhost"),
+		RedisHost:     env.OrDefault("REDIS_HOST", "localhost:6379"),
+		RedisPassword: env.OrDefault("REDIS_PASSWORD", "password"),
 
-		SmtpHost:     envOrDefault("SMTP_HOST", "smtp.example.net"),
-		SmtpPort:     envOrDefaultInt("SMTP_PORT", 465),
-		SmtpUsername: envOrDefault("SMTP_USERNAME", "mail@example.net"),
-		SmtpPassword: envOrDefault("SMTP_PASSWORD", "password"),
-		SmtpFrom:     envOrDefault("SMTP_FROM", "noreply@example.net"),
+		ServerAddress: env.OrDefault("ADDRESS", "0.0.0.0:3000"),
+		Domain:        env.OrDefault("DOMAIN", "localhost"),
 
-		IsLeader: envOrDefault("IS_LEADER", "true") == "true",
+		SmtpHost:     env.OrDefault("SMTP_HOST", "smtp.example.net"),
+		SmtpPort:     env.OrDefaultInt("SMTP_PORT", 465),
+		SmtpUsername: env.OrDefault("SMTP_USERNAME", "mail@example.net"),
+		SmtpPassword: env.OrDefault("SMTP_PASSWORD", "password"),
+		SmtpFrom:     env.OrDefault("SMTP_FROM", "noreply@example.net"),
 
-		HCaptchaSecret:  envOrDefault("HCAPTCHA_SECRET", ""),
-		HCaptchaSitekey: envOrDefault("HCAPTCHA_SITEKEY", ""),
+		IsLeader: env.OrDefault("IS_LEADER", "true") == "true",
 
-		PaymentsAPIAddress: envOrDefault("PAYMETSAPI_ADDRESS", "localhost"),
+		HCaptchaSecret:  env.OrDefault("HCAPTCHA_SECRET", ""),
+		HCaptchaSitekey: env.OrDefault("HCAPTCHA_SITEKEY", ""),
+
+		PaymentsAPIAddress: env.OrDefault("PAYMETSAPI_ADDRESS", "localhost"),
 	}
-}
-
-func envOrDefault(key string, def string) string {
-	if v, ok := os.LookupEnv(key); ok {
-		return v
-	}
-	return def
-}
-
-func envOrDefaultInt(key string, def int) int {
-	if v, ok := os.LookupEnv(key); ok {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
-	}
-	return def
 }

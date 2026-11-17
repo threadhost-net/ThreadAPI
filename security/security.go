@@ -1,15 +1,16 @@
-package applications
+package security
 
 import (
 	"errors"
 	"net/mail"
 	"regexp"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
-// Паттерн для проверки имени пользователя
 var usernameRe = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
 
-func validateEmail(email string) error {
+func ValidateEmail(email string) error {
 	if email == "" {
 		return errors.New("Email обязателен")
 	}
@@ -19,7 +20,7 @@ func validateEmail(email string) error {
 	return nil
 }
 
-func validateUsername(username string) error {
+func ValidateUsername(username string) error {
 	if len(username) < 3 {
 		return errors.New("Имя пользователя слишком короткое")
 	}
@@ -32,7 +33,7 @@ func validateUsername(username string) error {
 	return nil
 }
 
-func validatePassword(password string) error {
+func ValidatePassword(password string) error {
 	if len(password) < 8 {
 		return errors.New("Пароль слишком короткий")
 	}
@@ -40,4 +41,13 @@ func validatePassword(password string) error {
 		return errors.New("Пароль слишком длинный")
 	}
 	return nil
+}
+
+func Hash(password string) (string, error) {
+	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(b), err
+}
+
+func VerifyPassword(hash, password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }

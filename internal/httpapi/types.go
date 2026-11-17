@@ -1,8 +1,9 @@
 package httpapi
 
 import (
-	// "github.com/threadhost-net/ThreadAPI/platform"
 	"time"
+
+	"github.com/threadhost-net/ThreadAPI/session"
 )
 
 type registerRequest struct {
@@ -43,11 +44,11 @@ type confirmNewEmailRequest struct {
 }
 
 type accountInfoResponse struct {
-	ID          int64     `json:"id"`
-	Username    string    `json:"username"`
-	Email       string    `json:"email"`
-	Balance     int64     `json:"balance"`
-	IsActivated bool      `json:"is_activated"`
-	CreatedAt   time.Time `json:"created_at"`
-	// Sessions    []sessions.SessionInfo `json:"sessions"`
+	ID          int64                 `json:"id"`
+	Username    string                `json:"username"`
+	Email       string                `json:"email"`
+	Balance     int64                 `json:"balance"`
+	IsActivated bool                  `json:"is_activated"`
+	CreatedAt   time.Time             `json:"created_at"`
+	Sessions    []session.SessionInfo `json:"sessions"`
 }

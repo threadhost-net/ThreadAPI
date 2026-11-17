@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+
+	"github.com/threadhost-net/ThreadAPI/cookie"
 )
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -13,13 +15,13 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := toolbox.Register(r.Context(), req.Username, req.Password, req.Email, req.HCaptchaResponse)
+	status, err := toolbox.Register(r.Context(), req.Username, req.Password, req.Email, req.HCaptchaResponse)
 	if err != nil {
-		http.Error(w, err.Error(), result)
+		http.Error(w, err.Error(), status)
 		return
 	}
 
-	w.WriteHeader(result)
+	w.WriteHeader(status)
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -36,12 +38,26 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	userAgent := parseUserAgent(r.Header.Get("User-Agent"))
 
-	result, cookieToken, err := toolbox.Login(r.Context(), req.Username, req.Password, req.HCaptchaResponse, address, userAgent)
+	status, cookieToken, err := toolbox.Login(r.Context(), req.Username, req.Password, req.HCaptchaResponse, address, userAgent)
 	if err != nil {
-		http.Error(w, err.Error(), result)
+		http.Error(w, err.Error(), status)
 		return
 	}
 
-	setSessionCookie(w, cookieToken)
-	w.WriteHeader(result)
+	cookie.SetSessionCookie(w, cookieToken)
+	w.WriteHeader(status)
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	cookieToken, err := r.Cookie("session")
+	if err != nil {
+		cookie.ClearSessionCookie(w)
+		w.WriteHeader(http.StatusAccepted)
+		return
+	}
+
+	status, err := toolbox.Logout(r.Context(), cookieToken.Value)
+	if err != nil {
+		http.Error(w, err.Error(), status)
+	}
 }

@@ -1,8 +1,8 @@
-package httpapi
+package cookie
 
 import "net/http"
 
-func setSessionCookie(w http.ResponseWriter, token string) {
+func SetSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    token,
@@ -14,7 +14,7 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 	})
 }
 
-func clearSessionCookie(w http.ResponseWriter) {
+func ClearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    "",
