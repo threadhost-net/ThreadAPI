@@ -1,7 +1,11 @@
 package httpapi
 
 import (
+	"context"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -32,7 +36,7 @@ func InitRouter(stack *platform.Stack, domain string) http.Handler {
 		r.Post("/auth/login", login)
 		r.Post("/auth/logout", logout)
 		r.Post("/auth/email/verify", emailVerify)
-		r.Post("/auth/email/verify/confirm", emailConfirm)
+		r.Post("/auth/email/verify/confirm", emailVerifyConfirm)
 		r.Post("/auth/recover", recover)
 		r.Post("/auth/recover/confirm", recoverConfirm)
 		r.Post("/user/email/new/confirm", emailNewConfirm)
@@ -60,8 +64,46 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func authMiddleware(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("sus"))
+type ctxKey string
+
+const userIDKey ctxKey = "userID"
+
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("session")
+		if err != nil {
+			http.Error(w, "Не авторизован", http.StatusUnauthorized)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+
+		client := toolbox.Redis.Get("sessions")
+		n, err := client.Exists(ctx, "session:"+cookie.Value).Result()
+		if err != nil {
+			http.Error(w, "Ошибка сервера. Обратитесь в поддержку", http.StatusInternalServerError)
+			return
+		}
+		if n == 0 {
+			http.Error(w, "Ваша сессия истекла. Войдите в учётную запись заново", http.StatusForbidden)
+			return
+		}
+
+		userIDStr, _, ok := strings.Cut(cookie.Value, ":")
+		if !ok || userIDStr == "" {
+			http.Error(w, "Не авторизован", http.StatusUnauthorized)
+			return
+		}
+
+		userID, err := strconv.ParseInt(userIDStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Не авторизован", http.StatusUnauthorized)
+			return
+		}
+		ctx = context.WithValue(r.Context(), userIDKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func isHX(r *http.Request) bool {

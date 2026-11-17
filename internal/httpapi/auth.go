@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/threadhost-net/ThreadAPI/cookie"
+	"github.com/threadhost-net/ThreadAPI/useragent"
 )
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		address = r.RemoteAddr
 	}
 
-	userAgent := parseUserAgent(r.Header.Get("User-Agent"))
+	userAgent := useragent.Parse(r.Header.Get("User-Agent"))
 
 	status, cookieToken, err := toolbox.Login(r.Context(), req.Username, req.Password, req.HCaptchaResponse, address, userAgent)
 	if err != nil {
@@ -60,4 +61,9 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), status)
 	}
+
+}
+
+func emailVerify(w http.ResponseWriter, r *http.Request) {
+	return
 }
